@@ -42,9 +42,8 @@ public class ControllerVolunteer {
 	 * Constructor. Connect to the DB
 	 */
 	public ControllerVolunteer() {
-	try {
-			MongoClient mongo = new MongoClient();
-
+		MongoClient mongo = null;
+		try {
 			String vcap = System.getenv("VCAP_SERVICES");
 			if (vcap!=null){
 				JSONObject vcapServices = new JSONObject(vcap);
@@ -52,19 +51,15 @@ public class ControllerVolunteer {
 					JSONObject credentials = vcapServices.getJSONArray("mongodb-2.4").getJSONObject(0).getJSONObject("credentials");
 					String connURL = credentials.getString("url");
 			        mongo = new MongoClient(new MongoClientURI(connURL));
-
 				}
 			} else {
 			   mongo = new MongoClient( "localhost" , 27017 );
 			}
 			 DB db = mongo.getDB(DB_NAME);
-			 PATHS_COLLECTION = db.getCollection(COLLECTION_NAME);
+			 VOLUNTEER_COLLECTION = db.getCollection(COLLECTION_NAME);
 			 
 		} catch (UnknownHostException e) {
 			LOGGER.error("Connection to MongoDB failed");
-		} catch (Exception e) {
-			LOGGER.error("Failed: " + e.getMessage());
-	        e.printStackTrace();
 		}		
 	}
 	/**
