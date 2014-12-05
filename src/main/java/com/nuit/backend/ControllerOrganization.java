@@ -40,9 +40,9 @@ public class ControllerOrganization {
 	/**
 	 * Constructor. Connect to the DB
 	 */
-	public ControllerOrganization() {
-		MongoClient mongo = null;
-		try {
+	public ControllerOrganization() {try {
+			MongoClient mongo = new MongoClient();
+
 			String vcap = System.getenv("VCAP_SERVICES");
 			if (vcap!=null){
 				JSONObject vcapServices = new JSONObject(vcap);
@@ -50,15 +50,19 @@ public class ControllerOrganization {
 					JSONObject credentials = vcapServices.getJSONArray("mongodb-2.4").getJSONObject(0).getJSONObject("credentials");
 					String connURL = credentials.getString("url");
 			        mongo = new MongoClient(new MongoClientURI(connURL));
+
 				}
 			} else {
 			   mongo = new MongoClient( "localhost" , 27017 );
 			}
 			 DB db = mongo.getDB(DB_NAME);
-			 ORGANIZATION_COLLECTION = db.getCollection(COLLECTION_NAME);
+			 PATHS_COLLECTION = db.getCollection(COLLECTION_NAME);
 			 
 		} catch (UnknownHostException e) {
 			LOGGER.error("Connection to MongoDB failed");
+		} catch (Exception e) {
+			LOGGER.error("Failed: " + e.getMessage());
+	        e.printStackTrace();
 		}		
 	}
 	
