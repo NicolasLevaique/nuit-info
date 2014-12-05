@@ -74,6 +74,7 @@ public class ControllerOffer {
 		return missionResult;
 	}
 	
+	
 	/**
 	 * Get an array of path from the DB, based on the distance to the lat and long
 	 * @param latitude and longitude
@@ -133,6 +134,29 @@ public class ControllerOffer {
 		result.put("missions", missionsArray);
 		LOGGER.info("Returned : " + result.toString());
 		return result.toString();
+	}
+	
+	/**
+	 * Get a path from the DB, based on its id
+	 * @param pathId
+	 * @return
+	 */
+	@RequestMapping(value="/organization/{organizationId}", method=RequestMethod.GET)
+	public String getMissionsFromOrganization(@PathVariable("organizationId") UUID organizationId) {
+		LOGGER.info("Get request on path [" + organizationId + "]");
+		
+		BasicDBObject searchQuery = new BasicDBObject();
+		searchQuery.put("organization", organizationId.toString());
+	 
+		DBCursor cursor = OFFER_COLLECTION.find(searchQuery);
+		 
+		JSONArray offers = new JSONArray() ;
+		while (cursor.hasNext()) {
+			 offers.put(cursor.next());
+			LOGGER.info("Found path : " + offers.toString() + " in DB");
+		}
+		
+		return offers.toString();
 	}
 	
 	/**
