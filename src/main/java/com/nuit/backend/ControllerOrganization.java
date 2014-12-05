@@ -57,7 +57,7 @@ public class ControllerOrganization {
 	 * @return
 	 */
 	@RequestMapping(value="/{id}", method=RequestMethod.GET)
-	public String getMissionById(@PathVariable("id") UUID pathId) {
+	public static String getMissionById(@PathVariable("id") UUID pathId) {
 		LOGGER.info("Get request on path [" + pathId + "]");
 		
 		BasicDBObject searchQuery = new BasicDBObject();
@@ -75,14 +75,8 @@ public class ControllerOrganization {
 	}
 	
 	public static UUID getIdFromName (String name) {
-		/*JSONObject query = new JSONObject("{'name':"+ name + "}");
-		JSONObject fields = new JSONObject("{_id:0, id:1}");
-		BasicDBObject queryDB = (BasicDBObject) com.mongodb.util.JSON.parse(criteria.toString());
-		BasicDBObject fieldsDB = (BasicDBObject) com.mongodb.util.JSON.parse(option.toString());*/
 		BasicDBObject searchQuery = new BasicDBObject();
 		searchQuery.put("name", name);
-		/*BasicDBObject fields = new BasicDBObject();
-		searchQuery.put("_id", 0);*/
 	 
 		DBCursor cursor = ORGANIZATION_COLLECTION.find(searchQuery);
 		 

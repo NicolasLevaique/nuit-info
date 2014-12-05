@@ -4,6 +4,8 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+
+import org.apache.jasper.tagplugins.jstl.ForEach;
 import org.apache.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -14,10 +16,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.mongodb.BasicDBList;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DB;
 import com.mongodb.DBCollection;
 import com.mongodb.DBCursor;
+import com.mongodb.DBObject;
 import com.mongodb.MongoClient;
 //TODO: move the DB relation into a service ! If we want to do proper MVC...
 @RestController
@@ -48,6 +53,7 @@ public class ControllerVolunteer {
 			LOGGER.error("Connection to MongoDB failed");
 		}		
 	}
+	
 	/**
 	 * Get a path from the DB, based on its id
 	 * @param pathId
@@ -69,6 +75,40 @@ public class ControllerVolunteer {
 		}
 		
 		return pathResult;
+	}
+	
+	/**
+	 * GET /volunteer/missions/:volunteerid
+	 */
+	@RequestMapping(value="/missions/{volunteerid}", method=RequestMethod.GET)
+	public String getVolunteerMissions (@PathVariable("volunteerid") UUID volunteerId){
+		
+		LOGGER.info("Get request on path [" + volunteerId + "]");
+		String volunteer = this.getVolunteerById(volunteerId);
+		if (volunteer != null){
+			JSONObject jsonVol = new JSONObject(volunteer);
+			JSONArray missionArray = jsonVol.getJSONArray("missions");
+			
+			if (missionArray != null){
+				JSONArray list = new JSONArray();
+	
+				for (int i = 0; i < missionArray.length(); i++) {
+					JSONObject obj = missionArray.getJSONObject(i);
+					String mission = ControllerOffer.getMission(UUID.fromString((String) obj.get("missionid")));
+					JSONObject item = new JSONObject();
+					JSONObject test = new JSONObject();
+					item.put("mission", mission);
+					item.put("present",obj.get("present"));
+					list.put(item);
+				}
+			
+				JSONObject result = new JSONObject() ;	
+				result.put("missions", list);
+				LOGGER.info("Returned : " + result.toString());
+				return result.toString();
+			}
+		}
+		return "No missions";
 	}
 	/*
 	/**

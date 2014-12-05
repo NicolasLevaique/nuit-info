@@ -57,7 +57,7 @@ public class ControllerOffer {
 	 * @return
 	 */
 	@RequestMapping(value="/{id}", method=RequestMethod.GET)
-	public String getMission(@PathVariable("id") UUID missionId) {
+	public static String getMission(@PathVariable("id") UUID missionId) {
 		LOGGER.info("Get request on mission [" + missionId + "]");
 		
 		BasicDBObject searchQuery = new BasicDBObject();
@@ -158,6 +158,6 @@ public class ControllerOffer {
 		}
 		catch(JSONException e) {
 			LOGGER.error("Path format in request body is not a valid JSON Object"+ e);
-		}		
+		}
 	}
 }
