@@ -4,6 +4,7 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+
 import org.apache.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
 import com.mongodb.BasicDBObject;
 import com.mongodb.DB;
 import com.mongodb.DBCollection;
@@ -71,15 +73,15 @@ public class ControllerOffer {
 		
 		return missionResult;
 	}
-	/*
+	
 	/**
 	 * Get an array of path from the DB, based on the distance to the lat and long
 	 * @param latitude and longitude
 	 * @param distance in km from latitude and longitude where paths are wanted
 	 * @return
-	 *
+	 */
 	@RequestMapping(method=RequestMethod.GET)
-	public String getPathsByLocation(@RequestParam("lat") float latitude, @RequestParam("long") float longitude, 
+	public String getMissionsByLocation(@RequestParam("lat") float latitude, @RequestParam("long") float longitude, 
 			@RequestParam(value = "dist") float distance) {
 		LOGGER.info("Get request on path from location : [latitude:" + latitude + ", longitude:" + longitude + "]");	
 		 
@@ -107,12 +109,12 @@ public class ControllerOffer {
 		LOGGER.info("Returned : " + result.toString());
 		return result.toString();
 	}
-	*/
+	
 	/**
 	 * DONE
 	 * @return
 	 */
-	@RequestMapping(value="", method=RequestMethod.GET)
+	@RequestMapping(value="/all", method=RequestMethod.GET)
 	public String getMissions() {
 		LOGGER.info("Get request on all missions");	
 		BasicDBObject searchQuery = new BasicDBObject();
@@ -128,7 +130,7 @@ public class ControllerOffer {
 			LOGGER.info("Found mission: " + mission.toString() + " in DB");
 		}
 		
-		result.put("paths", missionsArray);
+		result.put("missions", missionsArray);
 		LOGGER.info("Returned : " + result.toString());
 		return result.toString();
 	}
@@ -138,12 +140,18 @@ public class ControllerOffer {
 	 * @param path
 	 */
 	@RequestMapping(method=RequestMethod.POST)
-	public void createOffer(@RequestBody String info) {
+	public void createMission(@RequestBody String info) {
 		LOGGER.info("POST request received with body [" + info+ "]");
 		try {
 			JSONObject pathJSON = new JSONObject(info);
+			String organization = pathJSON.getString("organization");
+			
 			UUID id = UUID.randomUUID();
 			pathJSON.put("id", id);
+			
+			UUID orgaID = ControllerOrganization.getIdFromName(organization);
+			
+			pathJSON.put("organization", orgaID);
 			BasicDBObject pathDB = (BasicDBObject) com.mongodb.util.JSON.parse(pathJSON.toString());
 			OFFER_COLLECTION.insert(pathDB);	
 			LOGGER.info("Path [" + pathJSON.toString() + "] added to DB");

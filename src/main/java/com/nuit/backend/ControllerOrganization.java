@@ -4,6 +4,7 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+
 import org.apache.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
 import com.mongodb.BasicDBObject;
 import com.mongodb.DB;
 import com.mongodb.DBCollection;
@@ -70,6 +72,26 @@ public class ControllerOrganization {
 		}
 		
 		return pathResult;
+	}
+	
+	public static UUID getIdFromName (String name) {
+		/*JSONObject query = new JSONObject("{'name':"+ name + "}");
+		JSONObject fields = new JSONObject("{_id:0, id:1}");
+		BasicDBObject queryDB = (BasicDBObject) com.mongodb.util.JSON.parse(criteria.toString());
+		BasicDBObject fieldsDB = (BasicDBObject) com.mongodb.util.JSON.parse(option.toString());*/
+		BasicDBObject searchQuery = new BasicDBObject();
+		searchQuery.put("name", name);
+		/*BasicDBObject fields = new BasicDBObject();
+		searchQuery.put("_id", 0);*/
+	 
+		DBCursor cursor = ORGANIZATION_COLLECTION.find(searchQuery);
+		 
+		String pathResult = null ;
+		if (cursor.hasNext()) {
+			 pathResult = cursor.next().toString();
+			LOGGER.info("Found path : " + pathResult + " in DB");
+		}
+		return  UUID.fromString((String) new JSONObject(pathResult).get("id"));
 	}
 	
 	/*

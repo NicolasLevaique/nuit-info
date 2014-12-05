@@ -114,7 +114,7 @@ public class ControllerVolunteer {
 	 * @return
 	 */
 	@RequestMapping(value="/all", method=RequestMethod.GET)
-	public String getPaths() {
+	public String getVolunteers() {
 		LOGGER.info("Get request on all paths");	
 		 
 		// variation of .001 in lat or long is a 100m variation on earth's surface
@@ -137,7 +137,7 @@ public class ControllerVolunteer {
 			LOGGER.info("Found path: " + path.toString() + " in DB");
 		}
 		
-		result.put("paths", pathsArray);
+		result.put("volunteers", pathsArray);
 		LOGGER.info("Returned : " + result.toString());
 		return result.toString();
 	}
