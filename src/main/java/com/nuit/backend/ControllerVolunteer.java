@@ -4,6 +4,7 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+
 import org.apache.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -14,14 +15,16 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
 import com.mongodb.BasicDBObject;
 import com.mongodb.DB;
 import com.mongodb.DBCollection;
 import com.mongodb.DBCursor;
+import com.mongodb.DBObject;
 import com.mongodb.MongoClient;
 //TODO: move the DB relation into a service ! If we want to do proper MVC...
 @RestController
-@RequestMapping("/volunteer")
+@RequestMapping("/volunteers")
 public class ControllerVolunteer {
 	
 	private static Logger LOGGER = Logger.getLogger(ControllerVolunteer.class);
@@ -150,9 +153,11 @@ public class ControllerVolunteer {
 	public void createVolunteer(@RequestBody String info) {
 		LOGGER.info("POST request received with body [" + info+ "]");
 		try {
+			JSONArray listOfMissions= new JSONArray();
 			JSONObject pathJSON = new JSONObject(info);
 			UUID id = UUID.randomUUID();
 			pathJSON.put("id", id);
+			pathJSON.put("listOfMissions", listOfMissions);
 			BasicDBObject pathDB = (BasicDBObject) com.mongodb.util.JSON.parse(pathJSON.toString());
 			VOLUNTEER_COLLECTION.insert(pathDB);	
 			LOGGER.info("Path [" + pathJSON.toString() + "] added to DB");
@@ -161,4 +166,36 @@ public class ControllerVolunteer {
 			LOGGER.error("Path format in request body is not a valid JSON Object"+ e);
 		}		
 	}
+	
+	
+	/**
+	 * Create a path in the DB from the request body
+	 * @param path
+	 */
+	@RequestMapping(value="addMission",method=RequestMethod.POST)
+	public void addMissionToVolunteer(@RequestBody String info) {
+		LOGGER.info("POST request received with body [" + info+ "]");
+		try {
+			
+			JSONObject pathJSON = new JSONObject(info);
+			UUID userId=UUID.fromString( pathJSON.get("userId").toString());
+			UUID missionId=UUID.fromString( pathJSON.get("missionId").toString());
+			LOGGER.warn("userId : " + userId + " et missionId " + missionId);
+			DBObject mission = new BasicDBObject("listOfMissions", new BasicDBObject("missionId",missionId.toString()).append("present",false));
+			DBObject updateQuery = new BasicDBObject("$push", mission);
+			DBObject userIdObject= new BasicDBObject("id",userId.toString());
+			LOGGER.warn("userIdObj : " + userIdObject + " et updateQuery " + updateQuery);
+			VOLUNTEER_COLLECTION.update( userIdObject, updateQuery);
+//			UUID id = UUID.randomUUID();
+//			pathJSON.put("id", id);
+			
+				
+			LOGGER.info("Path [" + mission.toString() + "] added to DB");
+		}
+		catch(JSONException e) {
+			LOGGER.error("Path format in request body is not a valid JSON Object"+ e);
+		}		
+	}
+	
+
 }
