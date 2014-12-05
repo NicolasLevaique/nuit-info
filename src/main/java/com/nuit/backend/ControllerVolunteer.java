@@ -22,6 +22,7 @@ import com.mongodb.DBCollection;
 import com.mongodb.DBCursor;
 import com.mongodb.DBObject;
 import com.mongodb.MongoClient;
+import com.mongodb.MongoClientURI;
 //TODO: move the DB relation into a service ! If we want to do proper MVC...
 @RestController
 @RequestMapping("/volunteers")
@@ -41,9 +42,19 @@ public class ControllerVolunteer {
 	 * Constructor. Connect to the DB
 	 */
 	public ControllerVolunteer() {
-		MongoClient mongo;
+		MongoClient mongo = null;
 		try {
-			 mongo = new MongoClient( "localhost" ,27017 );
+			String vcap = System.getenv("VCAP_SERVICES");
+			if (vcap!=null){
+				JSONObject vcapServices = new JSONObject(vcap);
+				if (vcapServices.has("mongodb-2.4")) {
+					JSONObject credentials = vcapServices.getJSONArray("mongodb-2.4").getJSONObject(0).getJSONObject("credentials");
+					String connURL = credentials.getString("url");
+			        mongo = new MongoClient(new MongoClientURI(connURL));
+				}
+			} else {
+			   mongo = new MongoClient( "localhost" , 27017 );
+			}
 			 DB db = mongo.getDB(DB_NAME);
 			 VOLUNTEER_COLLECTION = db.getCollection(COLLECTION_NAME);
 			 
@@ -172,7 +183,7 @@ public class ControllerVolunteer {
 	 * Create a path in the DB from the request body
 	 * @param path
 	 */
-	@RequestMapping(value="addMission",method=RequestMethod.POST)
+	@RequestMapping(value="/addMission",method=RequestMethod.POST)
 	public void addMissionToVolunteer(@RequestBody String info) {
 		LOGGER.info("POST request received with body [" + info+ "]");
 		try {
