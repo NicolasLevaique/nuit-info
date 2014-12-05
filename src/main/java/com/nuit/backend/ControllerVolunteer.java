@@ -1,11 +1,8 @@
 package com.nuit.backend;
 
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
-import org.apache.jasper.tagplugins.jstl.ForEach;
 import org.apache.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -14,19 +11,18 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.mongodb.BasicDBList;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DB;
 import com.mongodb.DBCollection;
 import com.mongodb.DBCursor;
 import com.mongodb.DBObject;
 import com.mongodb.MongoClient;
+import com.mongodb.MongoClientURI;
 //TODO: move the DB relation into a service ! If we want to do proper MVC...
 @RestController
-@RequestMapping("/volunteer")
+@RequestMapping("/volunteers")
 public class ControllerVolunteer {
 	
 	private static Logger LOGGER = Logger.getLogger(ControllerVolunteer.class);
@@ -43,9 +39,19 @@ public class ControllerVolunteer {
 	 * Constructor. Connect to the DB
 	 */
 	public ControllerVolunteer() {
-		MongoClient mongo;
+		MongoClient mongo = null;
 		try {
-			 mongo = new MongoClient( "localhost" ,27017 );
+			String vcap = System.getenv("VCAP_SERVICES");
+			if (vcap!=null){
+				JSONObject vcapServices = new JSONObject(vcap);
+				if (vcapServices.has("mongodb-2.4")) {
+					JSONObject credentials = vcapServices.getJSONArray("mongodb-2.4").getJSONObject(0).getJSONObject("credentials");
+					String connURL = credentials.getString("url");
+			        mongo = new MongoClient(new MongoClientURI(connURL));
+				}
+			} else {
+			   mongo = new MongoClient( "localhost" , 27017 );
+			}
 			 DB db = mongo.getDB(DB_NAME);
 			 VOLUNTEER_COLLECTION = db.getCollection(COLLECTION_NAME);
 			 
@@ -96,7 +102,6 @@ public class ControllerVolunteer {
 					JSONObject obj = missionArray.getJSONObject(i);
 					String mission = ControllerOffer.getMission(UUID.fromString((String) obj.get("missionid")));
 					JSONObject item = new JSONObject();
-					JSONObject test = new JSONObject();
 					item.put("mission", mission);
 					item.put("present",obj.get("present"));
 					list.put(item);
@@ -110,43 +115,7 @@ public class ControllerVolunteer {
 		}
 		return "No missions";
 	}
-	/*
-	/**
-	 * Get an array of path from the DB, based on the distance to the lat and long
-	 * @param latitude and longitude
-	 * @param distance in km from latitude and longitude where paths are wanted
-	 * @return
-	 *
-	@RequestMapping(method=RequestMethod.GET)
-	public String getPathsByLocation(@RequestParam("lat") float latitude, @RequestParam("long") float longitude, 
-			@RequestParam(value = "dist") float distance) {
-		LOGGER.info("Get request on path from location : [latitude:" + latitude + ", longitude:" + longitude + "]");	
-		 
-		// variation of .001 in lat or long is a 100m variation on earth's surface
-		float dist = distance * 0.00001f;
-		BasicDBObject searchQuery = new BasicDBObject();
-		List<BasicDBObject> searchArguments = new ArrayList<BasicDBObject>();
-		searchArguments.add(new BasicDBObject("checkpoints.0.latitude", new BasicDBObject("$lte", latitude + dist)
-			.append("$gte", latitude - dist)));
-		searchArguments.add(new BasicDBObject("checkpoints.0.longitude", new BasicDBObject("$lte", longitude + dist)
-		.append("$gte", longitude - dist)));
-		searchQuery.put("$and", searchArguments);
-	 
-		DBCursor cursor = VOLUNTEER_COLLECTION.find(searchQuery);
-//		 
-		JSONObject result = new JSONObject() ;
-		JSONArray pathsArray = new JSONArray();
-		while (cursor.hasNext()) {
-			JSONObject path = new JSONObject(cursor.next().toString());
-			 pathsArray.put(path);
-			LOGGER.info("Found path: " + path.toString() + " in DB");
-		}
-		
-		result.put("paths", pathsArray);
-		LOGGER.info("Returned : " + result.toString());
-		return result.toString();
-	}
-	*/
+	
 	/**
 	 * Get an array of path from the DB, based on the distance to the lat and long
 	 * @param latitude and longitude
@@ -157,18 +126,10 @@ public class ControllerVolunteer {
 	public String getVolunteers() {
 		LOGGER.info("Get request on all paths");	
 		 
-		// variation of .001 in lat or long is a 100m variation on earth's surface
-//		float dist = distance * 0.00001f;
 		BasicDBObject searchQuery = new BasicDBObject();
-//		List<BasicDBObject> searchArguments = new ArrayList<BasicDBObject>();
-//		searchArguments.add(new BasicDBObject("checkpoints.0.latitude", new BasicDBObject("$lte", latitude + dist)
-//			.append("$gte", latitude - dist)));
-//		searchArguments.add(new BasicDBObject("checkpoints.0.longitude", new BasicDBObject("$lte", longitude + dist)
-//		.append("$gte", longitude - dist)));
-//		searchQuery.put("$and", searchArguments);
 	 
 		DBCursor cursor = VOLUNTEER_COLLECTION.find(searchQuery);
-//		 
+
 		JSONObject result = new JSONObject() ;
 		JSONArray pathsArray = new JSONArray();
 		while (cursor.hasNext()) {
@@ -190,9 +151,11 @@ public class ControllerVolunteer {
 	public void createVolunteer(@RequestBody String info) {
 		LOGGER.info("POST request received with body [" + info+ "]");
 		try {
+			JSONArray listOfMissions= new JSONArray();
 			JSONObject pathJSON = new JSONObject(info);
 			UUID id = UUID.randomUUID();
 			pathJSON.put("id", id);
+			pathJSON.put("listOfMissions", listOfMissions);
 			BasicDBObject pathDB = (BasicDBObject) com.mongodb.util.JSON.parse(pathJSON.toString());
 			VOLUNTEER_COLLECTION.insert(pathDB);	
 			LOGGER.info("Path [" + pathJSON.toString() + "] added to DB");
@@ -201,4 +164,33 @@ public class ControllerVolunteer {
 			LOGGER.error("Path format in request body is not a valid JSON Object"+ e);
 		}		
 	}
+	
+	
+	/**
+	 * Create a path in the DB from the request body
+	 * @param path
+	 */
+	@RequestMapping(value="/addMission",method=RequestMethod.POST)
+	public void addMissionToVolunteer(@RequestBody String info) {
+		LOGGER.info("POST request received with body [" + info+ "]");
+		try {
+			
+			JSONObject pathJSON = new JSONObject(info);
+			UUID userId=UUID.fromString( pathJSON.get("userId").toString());
+			UUID missionId=UUID.fromString( pathJSON.get("missionId").toString());
+			LOGGER.warn("userId : " + userId + " et missionId " + missionId);
+			DBObject mission = new BasicDBObject("listOfMissions", new BasicDBObject("missionId",missionId.toString()).append("present",false));
+			DBObject updateQuery = new BasicDBObject("$push", mission);
+			DBObject userIdObject= new BasicDBObject("id",userId.toString());
+			LOGGER.warn("userIdObj : " + userIdObject + " et updateQuery " + updateQuery);
+			VOLUNTEER_COLLECTION.update( userIdObject, updateQuery);
+			
+				
+			LOGGER.info("Path [" + mission.toString() + "] added to DB");
+		}
+		catch(JSONException e) {
+			LOGGER.error("Path format in request body is not a valid JSON Object"+ e);
+		}		
+	}
+
 }
